@@ -1,10 +1,22 @@
 import * as THREE from '../models/three.module.min.js';
 import { createBunSwapScene, EMBLEM_TYPES, STATION_IDS, CRITTER_CROP_BOXES } from './scene3d.js';
 import { BunSwapAudio } from './audio.js';
+import {
+  createHelperAndEventsState,
+  stepHelperAndEvents,
+  triggerHelperBuddyTap,
+  triggerSurpriseFeverEvent,
+} from './helper_and_events.js';
 
 const RIVAL_SCORES = [220, 165, 110, 55];
 const RIVAL_CRITTERS = ['dogday', 'catnap', 'craftycorn', 'hoppy'];
 const PLAYER_CRITTER = 'baba';
+
+const WAVE_THEMES = {
+  1: 'sunny_blossom_courtyard',
+  2: 'twilight_lantern_lotus_festival',
+  3: 'imperial_starlight_sanctuary',
+};
 
 function getCritterCropStyle(critterId) {
   const [ux, uy, uw, uh] = CRITTER_CROP_BOXES[critterId] || [0, 0, 1, 1];
@@ -62,6 +74,8 @@ function createMoundSlot(index) {
     id: `mound_${index}`,
     emblemType: EMBLEM_TYPES[index],
     state: 'intact', // 'intact' | 'dug_chest' | 'empty_pit' | 'bun_swapped'
+    glazed: false,
+    justAutoSwapped: false,
     resetTimer: 0,
   };
 }
@@ -85,10 +99,16 @@ const sceneApi = createBunSwapScene(canvas);
 
 const state = {
   wave: 1,
+  waveTheme: WAVE_THEMES[1],
   coins: 0,
   totalCoinsAllWaves: 0,
   comboCount: 0,
   comboTimer: 0,
+  bunGlazeCharges: 0,
+  deluxeBunReady: false,
+  glazeUsedCount: 0,
+  gongRungCount: 0,
+  ...createHelperAndEventsState(),
   mounds: [
     createMoundSlot(0),
     createMoundSlot(1),
@@ -238,6 +258,8 @@ function spawnNextExplorerIntoSlot(slotIndex) {
   const mIdx = EMBLEM_TYPES.indexOf(spec.emblem);
   if (mIdx >= 0 && state.mounds[mIdx].state === 'bun_swapped') {
     state.mounds[mIdx].state = 'intact';
+    state.mounds[mIdx].glazed = false;
+    state.mounds[mIdx].justAutoSwapped = false;
     state.mounds[mIdx].resetTimer = 0;
   }
   return true;
@@ -253,9 +275,15 @@ function fillEmptyExplorerSeats() {
 
 function startWave(waveNum) {
   state.wave = Math.max(1, Math.min(3, waveNum));
+  state.waveTheme = WAVE_THEMES[state.wave] || WAVE_THEMES[1];
   state.coins = 0;
   state.comboCount = 0;
   state.comboTimer = 0;
+  state.bunGlazeCharges = 0;
+  state.deluxeBunReady = false;
+  state.glazeUsedCount = 0;
+  state.gongRungCount = 0;
+  Object.assign(state, createHelperAndEventsState());
   state.nextOrderIndex = 0;
   state.orderOutcomes = new Array(8).fill('pending');
   state.waveFinished = false;
@@ -279,10 +307,10 @@ function startWave(waveNum) {
 }
 
 // ============================================================================
-// Core 3-Step Novel Loop:
-// 1. Scan Explorer with X-Ray Magic Lens ("隐藏信息读心镜")
+// Core 3-Step Novel Loop + Pillar 1 & Pillar 2 Gadgets:
+// 1. Scan Explorer with X-Ray Magic Lens ("隐藏信息读心镜") or Lucky Garden Gong ("祈福金锣")
 // 2. Scoop Mound with Golden Shovel ("后山工兵铲挖走帝兵宝箱")
-// 3. Drop Plump Steamed Bun into the Pit ("掉包热腾腾大包子")!
+// 3. Glaze & Drop Plump Steamed Bun into the Pit ("蜜汁樱花酱掉包热腾腾大包子")!
 // ============================================================================
 
 function scanExplorerWithLens(expIdx = -1) {
@@ -327,9 +355,12 @@ function digMoundWithShovel(moundIdx = -1) {
 
   if (m.state === 'intact' || m.state === 'bun_swapped') {
     m.state = 'dug_chest';
+    m.glazed = false;
+    m.justAutoSwapped = false;
     m.resetTimer = 0;
-    state.coins += 12;
-    state.totalCoinsAllWaves += 12;
+    const digReward = 12 + (state.feverActive ? 4 : 0);
+    state.coins += digReward;
+    state.totalCoinsAllWaves += digReward;
     state.guideTimer = 0;
     BunSwapAudio.playShovelScoop(m.index);
     sceneApi.spawnDirtBurst(m.index);
@@ -340,6 +371,26 @@ function digMoundWithShovel(moundIdx = -1) {
   return false;
 }
 
+const helperCallbacks = {
+  onScanExplorer(slotIdx) {
+    return scanExplorerWithLens(slotIdx);
+  },
+  onDigMound(mIdx) {
+    return digMoundWithShovel(mIdx);
+  },
+  onSwapBun(mIdx) {
+    return swapBunIntoMound(mIdx);
+  },
+  onAddCoins(amount) {
+    state.coins += amount;
+    state.totalCoinsAllWaves += amount;
+    updateTopHud();
+  },
+  onSpawnCoins(stationId, count) {
+    spawnFlyingCoins(stationId, count);
+  },
+};
+
 function swapBunIntoMound(moundIdx = -1) {
   if (state.waveFinished) return false;
   let m = null;
@@ -348,7 +399,20 @@ function swapBunIntoMound(moundIdx = -1) {
   } else {
     m = state.mounds.find((md) => md.state === 'dug_chest' || md.state === 'empty_pit');
   }
-  if (!m) return false;
+  if (!m) {
+    const autoSwapped = state.mounds.find((md) => md.state === 'bun_swapped' && md.justAutoSwapped);
+    if (autoSwapped) {
+      autoSwapped.justAutoSwapped = false;
+      return true;
+    }
+    return false;
+  }
+
+  // Idempotent guard if sauce_pot 1-tap already swapped this dug mound a moment ago
+  if (m.state === 'bun_swapped' && m.justAutoSwapped) {
+    m.justAutoSwapped = false;
+    return true;
+  }
 
   // Forgiving: if child drags a bun directly onto an intact mound that an explorer wants, dig + swap!
   if (m.state === 'intact' || m.state === 'bun_swapped') {
@@ -359,8 +423,17 @@ function swapBunIntoMound(moundIdx = -1) {
 
   if (m.state !== 'dug_chest' && m.state !== 'empty_pit') return false;
 
+  const isDeluxeGlazed =
+    state.bunGlazeCharges > 0 || Boolean(state.feverActive);
+  if (state.bunGlazeCharges > 0 && !state.feverActive) {
+    state.bunGlazeCharges = Math.max(0, state.bunGlazeCharges - 1);
+  }
+  state.deluxeBunReady = state.bunGlazeCharges > 0 || Boolean(state.feverActive);
+
   const matchingExp = state.explorers.find((e) => e.active && e.targetEmblem === m.emblemType);
   m.state = 'bun_swapped';
+  m.glazed = isDeluxeGlazed;
+  m.justAutoSwapped = false;
   m.resetTimer = 0.85;
 
   if (matchingExp) {
@@ -368,23 +441,104 @@ function swapBunIntoMound(moundIdx = -1) {
     state.comboCount = Math.min(3, state.comboCount + 1);
     state.comboTimer = COMBO_WINDOW;
     const comboBonus = (state.comboCount - 1) * 5;
-    const earned = 24 + speedBonus + comboBonus;
+    const glazeBonus = isDeluxeGlazed ? 12 : 0;
+    const feverBonus = state.feverActive ? 8 : 0;
+    const earned = 24 + speedBonus + comboBonus + glazeBonus + feverBonus;
 
     state.coins += earned;
     state.totalCoinsAllWaves += earned;
     state.orderOutcomes[matchingExp.orderIndex] = 'served';
 
+    // If Glazed Deluxe Bun was swapped, restore +4.0s patience to any other waiting explorer & burst stars!
+    if (isDeluxeGlazed) {
+      for (const other of state.explorers) {
+        if (other.active && other.slotIndex !== matchingExp.slotIndex) {
+          other.patience = Math.min(other.maxPatience, other.patience + 4.0);
+        }
+      }
+      sceneApi.spawnGlazeSparkleBurst?.(m.index);
+    }
+
     BunSwapAudio.playBunSwap(state.comboCount);
-    spawnFlyingCoins(m.id, 3);
+    spawnFlyingCoins(m.id, isDeluxeGlazed ? 4 : 3);
 
     matchingExp.active = false;
     fillEmptyExplorerSeats();
+
+    // Trigger Golden Bun Party Fever when combo reaches 3 (if not already in fever and wave still active)
+    if (state.comboCount >= 3 && !state.feverActive) {
+      const stillPending = state.orderOutcomes.some((o) => o === 'pending');
+      if (stillPending) {
+        triggerSurpriseFeverEvent(state, helperCallbacks);
+      }
+    }
+
     checkWaveEndCondition();
   } else {
+    if (isDeluxeGlazed) {
+      sceneApi.spawnGlazeSparkleBurst?.(m.index);
+    }
     BunSwapAudio.playBunSwap(1);
   }
 
   state.guideTimer = 0;
+  updateTopHud();
+  return true;
+}
+
+/**
+ * Pillar 1A: 3D Golden Honey & Sakura Berry Glaze Pot (`sauce_pot`)
+ * Charges 3 Glazed Deluxe Buns, plays kalimba glaze audio, and if any mound is already 'dug_chest',
+ * automatically glazes AND swaps a deluxe bun in a single tap!
+ */
+function glazeBunWithSaucePot(autoSwapIfDug = true) {
+  if (state.waveFinished) return false;
+  state.bunGlazeCharges = 3;
+  state.deluxeBunReady = true;
+  state.glazeUsedCount += 1;
+  state.guideTimer = 0;
+
+  BunSwapAudio.playSauceGlaze?.();
+  sceneApi.spawnGlazeSparkleBurst?.(-1);
+
+  if (autoSwapIfDug) {
+    const dugMound = state.mounds.find((m) => m.state === 'dug_chest');
+    if (dugMound) {
+      swapBunIntoMound(dugMound.index);
+      // Keep 3 glaze charges ready on the steamer after 1-tap auto-glaze+swap
+      state.bunGlazeCharges = 3;
+      state.deluxeBunReady = true;
+      dugMound.justAutoSwapped = true;
+    }
+  }
+
+  updateTopHud();
+  return true;
+}
+
+/**
+ * Pillar 1B: 3D Lucky Garden Windbell & Temple Gong (`garden_gong`)
+ * Rings resonant temple chime, emits 3D expanding golden soundwave ring,
+ * instantly reveals all active unrevealed explorers, restores +3.5s patience, and awards +10 bonus coins!
+ */
+function ringGardenGong() {
+  if (state.waveFinished) return false;
+  state.gongRungCount += 1;
+  state.guideTimer = 0;
+
+  for (const exp of state.explorers) {
+    if (exp.active) {
+      exp.revealed = true;
+      exp.patience = Math.min(exp.maxPatience, exp.patience + 3.5);
+    }
+  }
+
+  state.coins += 10;
+  state.totalCoinsAllWaves += 10;
+
+  BunSwapAudio.playGongChime?.();
+  sceneApi.triggerGongWave?.();
+  spawnFlyingCoins('garden_gong', 2);
   updateTopHud();
   return true;
 }
@@ -448,13 +602,22 @@ function renderWaveModal(board) {
 }
 
 // ============================================================================
-// Pointer & Touch 1:1 Direct Manipulation (Lens Drag, Shovel Drag, Bun Drag + Tap)
+// Pointer & Touch 1:1 Direct Manipulation (Lens, Gong, Shovel, Glaze Pot, Steamer, Helper + Tap)
 // ============================================================================
 
 function handleStationTap(stationId) {
   if (!stationId || state.waveFinished) return false;
   if (stationId === 'magic_lens') {
     return scanExplorerWithLens(-1);
+  }
+  if (stationId === 'garden_gong') {
+    return ringGardenGong();
+  }
+  if (stationId === 'sauce_pot') {
+    return glazeBunWithSaucePot(true);
+  }
+  if (stationId === 'helper_buddy') {
+    return triggerHelperBuddyTap(state, helperCallbacks);
   }
   if (stationId.startsWith('explorer_')) {
     const idx = Number(stationId.replace('explorer_', ''));
@@ -523,6 +686,8 @@ window.addEventListener('pointermove', (e) => {
   } else if (state.activeTool === 'shovel' && overStation && overStation.startsWith('mound_')) {
     const idx = Number(overStation.replace('mound_', ''));
     digMoundWithShovel(idx);
+  } else if (state.activeTool === 'bun' && overStation === 'sauce_pot' && state.bunGlazeCharges < 3) {
+    glazeBunWithSaucePot(false);
   }
 });
 
@@ -545,7 +710,9 @@ window.addEventListener('pointerup', (e) => {
       digMoundWithShovel(-1);
     }
   } else if (tool === 'bun') {
-    if (dropStation && dropStation.startsWith('mound_')) {
+    if (dropStation === 'sauce_pot') {
+      glazeBunWithSaucePot(true);
+    } else if (dropStation && dropStation.startsWith('mound_')) {
       swapBunIntoMound(Number(dropStation.replace('mound_', '')));
     } else {
       swapBunIntoMound(-1);
@@ -596,9 +763,14 @@ function stepSimulation(dt) {
       m.resetTimer -= dt;
       if (m.resetTimer <= 0) {
         m.state = 'intact';
+        m.glazed = false;
+        m.justAutoSwapped = false;
       }
     }
   }
+
+  // Step Pillar 2 Friendly Helper Buddy & Surprise Party Fever
+  stepHelperAndEvents(state, dt, helperCallbacks);
 
   // Explorer patience countdown
   for (let i = 0; i < 2; i++) {
@@ -621,7 +793,7 @@ function stepSimulation(dt) {
     const unrev = state.explorers.find((e) => e.active && !e.revealed);
     const dugMound = state.mounds.find((m) => m.state === 'dug_chest');
     let targetSid = 'magic_lens';
-    if (dugMound) targetSid = 'bun_steamer';
+    if (dugMound) targetSid = state.bunGlazeCharges > 0 ? 'bun_steamer' : 'sauce_pot';
     else if (!unrev) targetSid = 'golden_shovel';
     const pt = sceneApi.getStationScreenRect(targetSid);
     guideHandEl.style.transform = `translate3d(${pt.x - 12}px, ${pt.y - 8}px, 0)`;
@@ -652,8 +824,16 @@ window.__gameTest = {
   getState() {
     return {
       wave: state.wave,
+      waveTheme: state.waveTheme,
       coins: state.coins,
       comboCount: state.comboCount,
+      bunGlazeCharges: state.bunGlazeCharges,
+      deluxeBunReady: state.deluxeBunReady,
+      glazeUsedCount: state.glazeUsedCount,
+      gongRungCount: state.gongRungCount,
+      helperAssists: state.helperAssists,
+      feverActive: state.feverActive,
+      feverTimer: Number((state.feverTimer || 0).toFixed(1)),
       waveFinished: state.waveFinished,
       modalOpen: state.modalOpen,
       canAdvance: state.canAdvance,
@@ -664,6 +844,7 @@ window.__gameTest = {
         id: m.id,
         emblemType: m.emblemType,
         state: m.state,
+        glazed: Boolean(m.glazed),
       })),
       explorers: state.explorers.map((e) => ({
         id: e.id,
@@ -701,6 +882,26 @@ window.__gameTest = {
     sceneApi.syncAndRender(state, 1 / 60, state.elapsed);
     return ok;
   },
+  glazeBun() {
+    const ok = glazeBunWithSaucePot(true);
+    sceneApi.syncAndRender(state, 1 / 60, state.elapsed);
+    return ok;
+  },
+  ringGardenGong() {
+    const ok = ringGardenGong();
+    sceneApi.syncAndRender(state, 1 / 60, state.elapsed);
+    return ok;
+  },
+  triggerHelperBuddy() {
+    triggerHelperBuddyTap(state, helperCallbacks);
+    sceneApi.syncAndRender(state, 1 / 60, state.elapsed);
+    return this.getState();
+  },
+  triggerSurpriseEvent() {
+    triggerSurpriseFeverEvent(state, helperCallbacks);
+    sceneApi.syncAndRender(state, 1 / 60, state.elapsed);
+    return this.getState();
+  },
   autoPlayExplorer(expSlot = 0) {
     const exp = (state.explorers[expSlot] && state.explorers[expSlot].active)
       ? state.explorers[expSlot]
@@ -724,4 +925,20 @@ window.__gameTest = {
     sceneApi.syncAndRender(state, 1 / 60, state.elapsed);
     return this.getState();
   },
+  getMaxMetalness() {
+    let maxM = 0;
+    let meshCount = 0;
+    sceneApi.scene.traverse((obj) => {
+      if (!obj.isMesh || !obj.material) return;
+      meshCount += 1;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const m of mats) {
+        if (typeof m.metalness === 'number' && m.metalness > maxM) {
+          maxM = m.metalness;
+        }
+      }
+    });
+    return { maxMetalness: Number(maxM.toFixed(3)), meshCount };
+  },
 };
+

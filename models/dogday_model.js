@@ -67,7 +67,7 @@ function loadCritterV11GLB(THREE, glbUrl, rigGroups, bumpTex) {
           name: m.name || 'CritterV11Mat',
           color: col,
           roughness: rough,
-          metalness: metal,
+          metalness: Math.min(0.22, metal),
           bumpMap: isPlush ? bumpTex : null,
           bumpScale: isPlush ? 0.005 : 0.0,
           side: THREE.DoubleSide
@@ -373,7 +373,7 @@ export function buildDogDayPlushModel(THREE) {
       name: 'DogDay_Sun_Pendant_Gold',
       color: 0xffd147,
       roughness: 0.28,
-      metalness: 0.38
+      metalness: 0.22
     }),
     mouthCavity: new THREE.MeshBasicMaterial({
       name: 'DogDay_Recessed_Mouth_Void',

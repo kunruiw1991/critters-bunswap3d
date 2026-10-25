@@ -67,7 +67,7 @@ function loadCritterV11GLB(THREE, glbUrl, rigGroups, bumpTex) {
           name: m.name || 'CritterV11Mat',
           color: col,
           roughness: rough,
-          metalness: metal,
+          metalness: Math.min(0.22, metal),
           bumpMap: isPlush ? bumpTex : null,
           bumpScale: isPlush ? 0.005 : 0.0,
           side: THREE.DoubleSide
@@ -290,7 +290,7 @@ export function buildCraftyCornPlushModel(THREE) {
       name: 'CraftyCorn_Horn_Spiral_Ridge',
       color: 0x88b4c8,
       roughness: 0.32,
-      metalness: 0.25
+      metalness: 0.22
     }),
     mouthCavity: new THREE.MeshBasicMaterial({
       name: 'CraftyCorn_Recessed_Mouth_Void',
@@ -323,7 +323,7 @@ export function buildCraftyCornPlushModel(THREE) {
       name: 'CraftyCorn_Silver_Zipper_Hardware',
       color: 0xcbd5e1,
       roughness: 0.26,
-      metalness: 0.82
+      metalness: 0.22
     }),
     seamDark: new THREE.MeshStandardMaterial({
       name: 'CraftyCorn_Zipper_Track_Dark',

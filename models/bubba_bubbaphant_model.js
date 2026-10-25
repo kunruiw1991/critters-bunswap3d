@@ -67,7 +67,7 @@ function loadCritterV11GLB(THREE, glbUrl, rigGroups, bumpTex) {
           name: m.name || 'CritterV11Mat',
           color: col,
           roughness: rough,
-          metalness: metal,
+          metalness: Math.min(0.22, metal),
           bumpMap: isPlush ? bumpTex : null,
           bumpScale: isPlush ? 0.005 : 0.0,
           side: THREE.DoubleSide
@@ -287,13 +287,13 @@ export function buildBubbaBubbaphantPlushModel(THREE) {
       emissive: 0xd97706,
       emissiveIntensity: 0.18,
       roughness: 0.32,
-      metalness: 0.65
+      metalness: 0.22
     }),
     screwBaseBlue: new THREE.MeshStandardMaterial({
       name: 'Bubba_ScrewBase_Cobalt_Blue',
       color: 0x1d4ed8,
       roughness: 0.28,
-      metalness: 0.78
+      metalness: 0.22
     }),
     tonguePink: new THREE.MeshStandardMaterial({
       name: 'Bubba_Tongue_Rose_Pink',
@@ -324,7 +324,7 @@ export function buildBubbaBubbaphantPlushModel(THREE) {
       name: 'Bubba_Silver_Zipper_Hardware',
       color: 0xd8dde6,
       roughness: 0.24,
-      metalness: 0.85
+      metalness: 0.22
     }),
     seamDark: new THREE.MeshStandardMaterial({
       name: 'Bubba_Zipper_Track_Black',

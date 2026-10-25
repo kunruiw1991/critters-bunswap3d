@@ -67,7 +67,7 @@ function loadCritterV11GLB(THREE, glbUrl, rigGroups, bumpTex) {
           name: m.name || 'CritterV11Mat',
           color: col,
           roughness: rough,
-          metalness: metal,
+          metalness: Math.min(0.22, metal),
           bumpMap: isPlush ? bumpTex : null,
           bumpScale: isPlush ? 0.005 : 0.0,
           side: THREE.DoubleSide
@@ -292,7 +292,7 @@ export function buildKickinChickenPlushModel(THREE) {
       emissive: 0xd97706,
       emissiveIntensity: 0.14,
       roughness: 0.25,
-      metalness: 0.68
+      metalness: 0.22
     }),
     mouthCavity: new THREE.MeshBasicMaterial({
       name: 'Kickin_Recessed_Mouth_Void',
@@ -316,7 +316,7 @@ export function buildKickinChickenPlushModel(THREE) {
       name: 'Kickin_Silver_Zipper_Hardware',
       color: 0xd8dde6,
       roughness: 0.24,
-      metalness: 0.84
+      metalness: 0.22
     }),
     seamDark: new THREE.MeshStandardMaterial({
       name: 'Kickin_Collar_Zipper_Dark',

@@ -2,7 +2,7 @@
  * Critter Treasure Scoop 3D: Magic Lens & Bun Swap!
  * Procedural WebAudio ASMR: Crystal X-Ray Mind-Reading Chime, Golden Shovel Scoop,
  * Imperial Treasure Chest Fanfare, & Squishy Steamed Bun Swap!
- * 100% Zero-Voiceover (zero speechSynthesis).
+ * 100% Zero-Voiceover (pure procedural WebAudio synthesis).
  */
 
 const PENTATONIC_HZ = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1318.51];
@@ -262,4 +262,106 @@ export const BunSwapAudio = {
       });
     } catch (_) {}
   },
+
+  /**
+   * Golden Honey & Sakura Berry Glaze Pot ("蜜汁樱花酱点心壶") bubbly pop + ascending 3-note kalimba chord!
+   */
+  playSauceGlaze() {
+    if (muted || !canTrigger('sauceGlaze', 40)) return;
+    const audioCtx = ensureContext();
+    if (!audioCtx || !masterGain) return;
+    try {
+      const t = audioCtx.currentTime;
+      // Sweet bubbly honey glaze pop
+      const popOsc = audioCtx.createOscillator();
+      const popGain = audioCtx.createGain();
+      popOsc.type = 'sine';
+      popOsc.frequency.setValueAtTime(320, t);
+      popOsc.frequency.exponentialRampToValueAtTime(760, t + 0.075);
+      popGain.gain.setValueAtTime(0.001, t);
+      popGain.gain.linearRampToValueAtTime(0.22, t + 0.012);
+      popGain.gain.exponentialRampToValueAtTime(0.001, t + 0.095);
+      popOsc.connect(popGain);
+      popGain.connect(masterGain);
+      popOsc.start(t);
+      popOsc.stop(t + 0.11);
+
+      // Ascending 3-note kalimba chord
+      scheduleBellNote(audioCtx, masterGain, PENTATONIC_HZ[2], t + 0.04, 0.24, 0.20);
+      scheduleBellNote(audioCtx, masterGain, PENTATONIC_HZ[4], t + 0.09, 0.28, 0.22);
+      scheduleBellNote(audioCtx, masterGain, PENTATONIC_HZ[5], t + 0.14, 0.34, 0.24);
+    } catch (_) {}
+  },
+
+  /**
+   * Lucky Garden Windbell & Temple Gong ("祈福金锣") warm resonant pentatonic bell + shimmer harmonic!
+   */
+  playGongChime() {
+    if (muted || !canTrigger('gongChime', 60)) return;
+    const audioCtx = ensureContext();
+    if (!audioCtx || !masterGain) return;
+    try {
+      const t = audioCtx.currentTime;
+      // Warm resonant fundamental temple gong
+      const gongOsc = audioCtx.createOscillator();
+      const gongGain = audioCtx.createGain();
+      gongOsc.type = 'sine';
+      gongOsc.frequency.setValueAtTime(261.63, t);
+      gongGain.gain.setValueAtTime(0.001, t);
+      gongGain.gain.linearRampToValueAtTime(0.28, t + 0.015);
+      gongGain.gain.exponentialRampToValueAtTime(0.001, t + 0.68);
+      gongOsc.connect(gongGain);
+      gongGain.connect(masterGain);
+      gongOsc.start(t);
+      gongOsc.stop(t + 0.70);
+
+      // Shimmering pentatonic windbell overtones
+      scheduleBellNote(audioCtx, masterGain, PENTATONIC_HZ[0], t + 0.02, 0.45, 0.20);
+      scheduleBellNote(audioCtx, masterGain, PENTATONIC_HZ[2], t + 0.08, 0.42, 0.18);
+      scheduleBellNote(audioCtx, masterGain, PENTATONIC_HZ[4], t + 0.14, 0.46, 0.20);
+      scheduleBellNote(audioCtx, masterGain, PENTATONIC_HZ[6], t + 0.20, 0.50, 0.16);
+    } catch (_) {}
+  },
+
+  /**
+   * Friendly Garden Helper Buddy ("跳跳兔小帮手") cheerful bouncy 3-note marimba arpeggio!
+   */
+  playHelperCheer() {
+    if (muted || !canTrigger('helperCheer', 50)) return;
+    const audioCtx = ensureContext();
+    if (!audioCtx || !masterGain) return;
+    try {
+      const t = audioCtx.currentTime;
+      scheduleBellNote(audioCtx, masterGain, PENTATONIC_HZ[1], t, 0.20, 0.22);
+      scheduleBellNote(audioCtx, masterGain, PENTATONIC_HZ[3], t + 0.06, 0.24, 0.24);
+      scheduleBellNote(audioCtx, masterGain, PENTATONIC_HZ[5], t + 0.12, 0.32, 0.26);
+    } catch (_) {}
+  },
+
+  /**
+   * Golden Bun Party Fever ("黄金包子狂欢派对") sparkling 5-note pentatonic celebration cascade!
+   */
+  playFeverChime() {
+    if (muted || !canTrigger('feverChime', 80)) return;
+    const audioCtx = ensureContext();
+    if (!audioCtx || !masterGain) return;
+    try {
+      const t = audioCtx.currentTime;
+      const feverNotes = [
+        PENTATONIC_HZ[0],
+        PENTATONIC_HZ[2],
+        PENTATONIC_HZ[3],
+        PENTATONIC_HZ[5],
+        PENTATONIC_HZ[6],
+      ];
+      feverNotes.forEach((f, idx) => {
+        scheduleBellNote(audioCtx, masterGain, f, t + idx * 0.055, 0.34, 0.22);
+      });
+    } catch (_) {}
+  },
 };
+
+if (typeof window !== 'undefined') {
+  window.BunSwapAudio = BunSwapAudio;
+}
+

@@ -67,7 +67,7 @@ function loadCritterV11GLB(THREE, glbUrl, rigGroups, bumpTex) {
           name: m.name || 'CritterV11Mat',
           color: col,
           roughness: rough,
-          metalness: metal,
+          metalness: Math.min(0.22, metal),
           bumpMap: isPlush ? bumpTex : null,
           bumpScale: isPlush ? 0.005 : 0.0,
           side: THREE.DoubleSide
@@ -337,7 +337,7 @@ export function buildPickyPiggyPlushModel(THREE) {
       name: 'Picky_Silver_Zipper_Hardware',
       color: 0xc8cdd6,
       roughness: 0.28,
-      metalness: 0.80
+      metalness: 0.22
     }),
     seamDark: new THREE.MeshStandardMaterial({
       name: 'Picky_Plush_Seam_Groove',

@@ -67,7 +67,7 @@ function loadCritterV11GLB(THREE, glbUrl, rigGroups, bumpTex) {
           name: m.name || 'CritterV11Mat',
           color: col,
           roughness: rough,
-          metalness: metal,
+          metalness: Math.min(0.22, metal),
           bumpMap: isPlush ? bumpTex : null,
           bumpScale: isPlush ? 0.005 : 0.0,
           side: THREE.DoubleSide
@@ -383,13 +383,13 @@ export function buildCatNapPlushModel(THREE) {
       emissive: 0x423000,
       emissiveIntensity: 0.12,
       roughness: 0.24,
-      metalness: 0.78
+      metalness: 0.22
     }),
     metalZipper: new THREE.MeshStandardMaterial({
       name: 'CatNap_Zipper_Hardware',
       color: 0xc8cdd6,
       roughness: 0.28,
-      metalness: 0.82
+      metalness: 0.22
     }),
     zipperTrack: new THREE.MeshStandardMaterial({
       name: 'CatNap_Zipper_Track_Black',

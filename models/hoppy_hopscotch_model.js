@@ -67,7 +67,7 @@ function loadCritterV11GLB(THREE, glbUrl, rigGroups, bumpTex) {
           name: m.name || 'CritterV11Mat',
           color: col,
           roughness: rough,
-          metalness: metal,
+          metalness: Math.min(0.22, metal),
           bumpMap: isPlush ? bumpTex : null,
           bumpScale: isPlush ? 0.005 : 0.0,
           side: THREE.DoubleSide
@@ -318,7 +318,7 @@ export function buildHoppyHopscotchPlushModel(THREE) {
       name: 'Hoppy_Gold_Zipper_Hardware',
       color: 0xeab308,
       roughness: 0.24,
-      metalness: 0.85
+      metalness: 0.22
     }),
     seamDark: new THREE.MeshStandardMaterial({
       name: 'Hoppy_Zipper_Track_Black',

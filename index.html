@@ -73,7 +73,8 @@
 
     #wavePill {
       flex-shrink: 1;
-      min-width: 0;
+      min-width: 80px;
+      min-height: 80px;
       pointer-events: auto;
       cursor: pointer;
     }
@@ -267,8 +268,10 @@
     }
 
     .icon-btn {
-      width: clamp(40px, 5.2vw, 50px);
-      height: clamp(40px, 5.2vw, 50px);
+      min-width: 80px;
+      min-height: 80px;
+      width: 80px;
+      height: 80px;
       border-radius: 50%;
       border: 3px solid #3f6212;
       background: linear-gradient(180deg, #fffbeb 0%, #fde68a 100%);
@@ -367,12 +370,12 @@
       flex-direction: column;
       align-items: center;
       gap: clamp(12px, 2.2vh, 20px);
-      transform: scale(0.86) translateY(16px);
-      transition: transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transform: translateY(12px);
+      transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     #waveModalBackdrop.open #waveModalCard {
-      transform: scale(1) translateY(0);
+      transform: translateY(0);
     }
 
     #modalStarsRow {
@@ -473,10 +476,15 @@
       background: linear-gradient(180deg, #fed7aa 0%, #d97706 100%);
     }
 
-    .podium-slot.rank-4 .podium-pillar,
-    .podium-slot.rank-5 .podium-pillar {
-      height: 28%;
+    .podium-slot.rank-4 .podium-pillar {
+      height: 31%;
       background: linear-gradient(180deg, #e2e8f0 0%, #64748b 100%);
+      opacity: 0.88;
+    }
+
+    .podium-slot.rank-5 .podium-pillar {
+      height: 20%;
+      background: linear-gradient(180deg, #cbd5e1 0%, #475569 100%);
       opacity: 0.82;
     }
 
@@ -494,8 +502,10 @@
     }
 
     .modal-action-btn {
-      width: clamp(64px, 12vw, 82px);
-      height: clamp(64px, 12vw, 82px);
+      min-width: 80px;
+      min-height: 80px;
+      width: clamp(80px, 12vw, 86px);
+      height: clamp(80px, 12vw, 86px);
       border-radius: 999px;
       border: 4px solid #3f6212;
       display: flex;
@@ -541,6 +551,21 @@
         left: 6px;
         right: 6px;
         gap: 6px;
+        flex-wrap: wrap;
+      }
+      #wavePill {
+        order: 1;
+        min-width: 80px;
+        min-height: 80px;
+      }
+      #hudActions {
+        order: 2;
+        margin-left: auto;
+      }
+      #scorePill {
+        order: 3;
+        flex: 1 1 100%;
+        max-width: 100%;
       }
       .hud-card {
         padding: 4px 8px;
@@ -551,12 +576,12 @@
         padding-right: 4px;
       }
       .wave-crown {
-        width: 18px;
-        height: 18px;
+        width: 16px;
+        height: 16px;
       }
       .cust-pip {
-        width: 10px;
-        height: 10px;
+        width: 9px;
+        height: 9px;
       }
       #coinEmblem {
         width: 22px;
@@ -571,8 +596,10 @@
         height: 8px;
       }
       .icon-btn {
-        width: 38px;
-        height: 38px;
+        min-width: 80px;
+        min-height: 80px;
+        width: 80px;
+        height: 80px;
       }
       #waveModalCard {
         width: min(94vw, 400px);
@@ -584,7 +611,7 @@
         height: 40px;
       }
       #modalPodiumRow {
-        height: 120px;
+        height: 132px;
         gap: 6px;
       }
       .podium-avatar-wrap {
@@ -593,8 +620,10 @@
         margin-bottom: 4px;
       }
       .modal-action-btn {
-        width: 58px;
-        height: 58px;
+        min-width: 80px;
+        min-height: 80px;
+        width: 80px;
+        height: 80px;
       }
     }
 
@@ -610,33 +639,38 @@
         padding: 3px 8px;
         gap: 6px;
       }
+      #waveModalBackdrop {
+        padding: 6px;
+      }
       #waveModalCard {
-        width: min(92vw, 460px);
-        max-height: 94vh;
-        padding: 10px 16px;
-        gap: 8px;
+        width: min(92vw, 480px);
+        max-height: 96vh;
+        padding: 8px 16px;
+        gap: 6px;
         border-radius: 20px;
       }
       .modal-star {
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
       }
       #modalPodiumRow {
-        height: clamp(80px, 26vh, 105px);
-        padding-top: 4px;
+        height: clamp(112px, 34vh, 136px);
+        padding-top: 2px;
       }
       .podium-avatar-wrap {
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
         margin-bottom: 3px;
       }
       .podium-medal-svg {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
       }
       .modal-action-btn {
-        width: 48px;
-        height: 48px;
+        min-width: 80px;
+        min-height: 80px;
+        width: 80px;
+        height: 80px;
       }
     }
   </style>
